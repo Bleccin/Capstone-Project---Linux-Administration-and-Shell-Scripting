@@ -14,16 +14,20 @@ Define IAM User Names Array:
 Create IAM Users:
 3. I created a function called "create_iam_users" to create new IAM users.
 4. I defined a Loop to go through the array and create IAM users for all the usernames on the list.
+5. I placed an if statement within the loop to check if the name already exists before creating the name. I will only create a new user where the username doe not exist.
 
 Create IAM Group:
-5. I created a function called "create_iam_group" for the creating an IAM group named "Admin".
+6. I created a function called "create_iam_group" for the creating an IAM group named "Admin".
+7. I placed an if statement in the function to check if the group already exists. The admin group will only be created if it does not exist already.
 
 Attach Administrative policy to Group:
-6. I created a function named "attach_admin_policy_to_group" to attach administrative policy to the group.
+8. I created a function named "attach_admin_policy_to_group" to attach administrative policy to the group.
+9. I added an if statement to verify if the group already have the administrative policy attached. It should only attach the policy when the group does not have an existing administrative policy.
 
 Assign users to the admin Group:
-7. I created a function named "assign_users_to_group" to assign all the created users to the admin group.
-8. I created a for loop to loop through the array of users I created earlier and add them to the admin group.
+10. I created a function named "assign_users_to_group" to assign all the created users to the admin group.
+11. I created a for loop to loop through the array of users I created earlier and add them to the admin group.
+12. I added an if statement to check if the users have already been added to the group. The users should only be added to the group when they are not already present in it.
 
 Finally I called all the functions I created at the end of the script.
 
@@ -127,28 +131,55 @@ create_iam_users() \{
     #Loop through the array and create IAM users for all the names on the list
 
     for username in "$\{usernames[@]\}"; do
-            echo "creating IAM user: $username"
-            aws iam create-user --user-name "$username"
+    #check if the user already exists
+    if aws iam get-user --user-name "$username" >/dev/null 2>&1; then
+      echo "User $username already exists, skipping creation."
+    else    
+    echo "creating IAM user: $username"
+            echo "Creating IAM user: $username"
+      if aws iam create-user --user-name "$username" >/dev/null 2>&1; then
+        echo "Successfully created user: $username"
+      else
+        echo "Failed to create user: $username" >&2
+      fi
+    fi
  done
 \}
 
 #Function to create IAM User Group
  create_iam_group() \{
- echo "creating IAM group: admin"
- aws iam create-group --group-name admin
+ # Check if the group already exists
+  if aws iam get-group --group-name admin >/dev/null 2>&1; then
+    echo "Group 'admin' already exists, skipping creation."
+  else
+    echo "Creating IAM group: admin"
+    if aws iam create-group --group-name admin >/dev/null 2>&1; then
+      echo "Successfully created group: admin"
+    else
+      echo "Failed to create group: admin" >&2
+    fi
+  fi
  \}
 
  #Function to attach administrative policy to the group
  attach_admin_policy_to_group() \{
-  echo "Attaching Administrator Access policy to the admin group"
-  aws iam attach-group-policy --group-name admin --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
+  echo "Attaching AdministratorAccess policy to the admin group"
+  if aws iam attach-group-policy --group-name admin --policy-arn arn:aws:iam::aws:policy/AdministratorAccess >/dev/null 2>&1; then
+    echo "Successfully attached AdministratorAccess policy to the admin group"
+  else
+    echo "Failed to attach AdministratorAccess policy to the admin group" >&2
+  fi
 \}
 
 #Function to assign users to the admin group
 assign_users_to_group() \{
   for username in "$\{usernames[@]\}"; do
     echo "Adding user $username to admin group"
-    aws iam add-user-to-group --user-name "$username" --group-name admin
+    if aws iam add-user-to-group --user-name "$username" --group-name admin >/dev/null 2>&1; then
+      echo "Successfully added user $username to admin group"
+    else
+      echo "Failed to add user $username to admin group" >&2
+    fi
   done
 \}
 
